@@ -8,4 +8,4 @@ sqlalchemy
 databases
 aiosqlite
 asyncpg
-
+psycopg2-binary
