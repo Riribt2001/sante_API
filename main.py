@@ -10,7 +10,7 @@ import databases
 # ---------------------
 # Configuration base de données SQLite
 # ---------------------
-DATABASE_URL = "sqlite:///./spirometry_data.db"
+DATABASE_URL = "postgresql://user:password@host/dbname"
 database = databases.Database(DATABASE_URL)
 metadata = sqlalchemy.MetaData()
 
