@@ -8,9 +8,10 @@ import sqlalchemy
 import databases
 
 # ---------------------
-# Configuration base de données SQLite
+# Configuration base de données PostgreSQL via variable d'environnement
 # ---------------------
-DATABASE_URL = "postgresql://user:password@host/dbname"
+DATABASE_URL = os.getenv("DATABASE_URL")  # ✅ important !
+
 database = databases.Database(DATABASE_URL)
 metadata = sqlalchemy.MetaData()
 
@@ -69,7 +70,7 @@ def predict(data: InputData):
     prediction = model.predict(X_scaled)[0]
     return {"diagnostic": classes[prediction]}
 
-# Endpoint prédiction + sauvegarde dans SQLite
+# Endpoint prédiction + sauvegarde dans PostgreSQL
 @app.post("/backup")
 async def backup(data: InputData):
     X = np.array([[data.FEV1, data.FVC, data.FEV1_FVC, data.SpO2, data.BPM]])
@@ -94,4 +95,3 @@ async def backup(data: InputData):
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))  # Render fournit le port
     uvicorn.run("main:app", host="0.0.0.0", port=port)
-
