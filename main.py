@@ -10,7 +10,7 @@ import uvicorn
 # ✅ 1. Connexion PostgreSQL (Render)
 # Remplace ci-dessous avec TON URL Render si différente
 # ----------------------------
-DATABASE_URL = "postgresql://spirometry_db_user:r8hRkGJLsJHr@dpg-cmn3kq7cmk4c73a91ubg-a.frankfurt-postgres.render.com/spirometry_db"
+DATABASE_URL = "postgresql://spirometry_db_user:hDFjcUUGuTC1NcTG47ta1NuuhPkuu6WK@dpg-d23nhkndiees739qnj1g-a.oregon-postgres.render.com/spirometry_db"
 
 database = databases.Database(DATABASE_URL)
 metadata = sqlalchemy.MetaData()
