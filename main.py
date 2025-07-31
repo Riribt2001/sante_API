@@ -94,7 +94,7 @@ async def backup(data: InputData):
     )
     await database.execute(query)
 
-    return {"status": "Backup réussi ✅", "diagnostic": diagnostic}
+    return {"status": "Backup reussi ", "diagnostic": diagnostic}
 
 # ----------------------------
 # ✅ 6. Pour exécution locale
