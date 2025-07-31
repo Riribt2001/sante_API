@@ -8,7 +8,6 @@ import uvicorn
 
 # ----------------------------
 # ✅ 1. Connexion PostgreSQL (Render)
-# Remplace ci-dessous avec TON URL Render si différente
 # ----------------------------
 DATABASE_URL = "postgresql://spirometry_db_user:hDFjcUUGuTC1NcTG47ta1NuuhPkuu6WK@dpg-d23nhkndiees739qnj1g-a.oregon-postgres.render.com/spirometry_db"
 
@@ -16,7 +15,7 @@ database = databases.Database(DATABASE_URL)
 metadata = sqlalchemy.MetaData()
 
 # ----------------------------
-# ✅ 2. Définition table "records"
+# ✅ 2. Définition de la table
 # ----------------------------
 records = sqlalchemy.Table(
     "records",
@@ -30,21 +29,21 @@ records = sqlalchemy.Table(
     sqlalchemy.Column("diagnostic", sqlalchemy.String),
 )
 
-# 🔧 Crée la table si elle n’existe pas (utile en local)
-engine = sqlalchemy.create_engine(DATABASE_URL)
-metadata.create_all(engine)
+# ❌ Ne PAS créer la table automatiquement sur Render
+# engine = sqlalchemy.create_engine(DATABASE_URL)
+# metadata.create_all(engine)
 
 # ----------------------------
-# ✅ 3. App FastAPI
+# ✅ 3. Création de l'app
 # ----------------------------
 app = FastAPI()
 
-# 🔍 Chargement du modèle IA et du scaler
+# 🔍 Chargement modèle IA + scaler
 model = joblib.load("rf_model.pkl")
 scaler = joblib.load("scaler.pkl")
 classes = ["obstructive", "restrictive", "normal", "unknown"]
 
-# 🧾 Schéma des données entrantes
+# 📥 Schéma Pydantic
 class InputData(BaseModel):
     FEV1: float
     FVC: float
@@ -53,7 +52,7 @@ class InputData(BaseModel):
     BPM: int
 
 # ----------------------------
-# ✅ 4. Connexion / Déconnexion
+# ✅ 4. Connexion DB Render
 # ----------------------------
 @app.on_event("startup")
 async def startup():
@@ -66,7 +65,6 @@ async def shutdown():
 # ----------------------------
 # ✅ 5. Endpoints
 # ----------------------------
-
 @app.get("/")
 def root():
     return {"message": "API is running. Use /predict or /backup."}
@@ -85,7 +83,7 @@ async def backup(data: InputData):
     prediction = model.predict(X_scaled)[0]
     diagnostic = classes[prediction]
 
-    # Sauvegarde dans PostgreSQL
+    # 📝 Insertion dans PostgreSQL
     query = records.insert().values(
         FEV1=data.FEV1,
         FVC=data.FVC,
@@ -99,7 +97,7 @@ async def backup(data: InputData):
     return {"status": "Backup réussi ✅", "diagnostic": diagnostic}
 
 # ----------------------------
-# ✅ 6. Lancement local
+# ✅ 6. Pour exécution locale
 # ----------------------------
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000)
