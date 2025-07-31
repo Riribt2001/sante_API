@@ -2,19 +2,22 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 import joblib
 import numpy as np
-import os
-import uvicorn
 import sqlalchemy
 import databases
+import uvicorn
 
-# ---------------------
-# Configuration base de données PostgreSQL via variable d'environnement
-# ---------------------
-DATABASE_URL = os.getenv("DATABASE_URL")  # ✅ important !
+# ----------------------------
+# ✅ 1. Connexion PostgreSQL (Render)
+# Remplace ci-dessous avec TON URL Render si différente
+# ----------------------------
+DATABASE_URL = "postgresql://spirometry_db_user:r8hRkGJLsJHr@dpg-cmn3kq7cmk4c73a91ubg-a.frankfurt-postgres.render.com/spirometry_db"
 
 database = databases.Database(DATABASE_URL)
 metadata = sqlalchemy.MetaData()
 
+# ----------------------------
+# ✅ 2. Définition table "records"
+# ----------------------------
 records = sqlalchemy.Table(
     "records",
     metadata,
@@ -27,20 +30,21 @@ records = sqlalchemy.Table(
     sqlalchemy.Column("diagnostic", sqlalchemy.String),
 )
 
+# 🔧 Crée la table si elle n’existe pas (utile en local)
 engine = sqlalchemy.create_engine(DATABASE_URL)
 metadata.create_all(engine)
 
-# ---------------------
-# Application FastAPI
-# ---------------------
+# ----------------------------
+# ✅ 3. App FastAPI
+# ----------------------------
 app = FastAPI()
 
-# Chargement du modèle IA et du scaler
+# 🔍 Chargement du modèle IA et du scaler
 model = joblib.load("rf_model.pkl")
 scaler = joblib.load("scaler.pkl")
 classes = ["obstructive", "restrictive", "normal", "unknown"]
 
-# Schéma des données en entrée
+# 🧾 Schéma des données entrantes
 class InputData(BaseModel):
     FEV1: float
     FVC: float
@@ -48,7 +52,9 @@ class InputData(BaseModel):
     SpO2: int
     BPM: int
 
-# Connexion/déconnexion à la base
+# ----------------------------
+# ✅ 4. Connexion / Déconnexion
+# ----------------------------
 @app.on_event("startup")
 async def startup():
     await database.connect()
@@ -57,12 +63,14 @@ async def startup():
 async def shutdown():
     await database.disconnect()
 
-# Test de santé
+# ----------------------------
+# ✅ 5. Endpoints
+# ----------------------------
+
 @app.get("/")
 def root():
     return {"message": "API is running. Use /predict or /backup."}
 
-# Endpoint prédiction seule
 @app.post("/predict")
 def predict(data: InputData):
     X = np.array([[data.FEV1, data.FVC, data.FEV1_FVC, data.SpO2, data.BPM]])
@@ -70,7 +78,6 @@ def predict(data: InputData):
     prediction = model.predict(X_scaled)[0]
     return {"diagnostic": classes[prediction]}
 
-# Endpoint prédiction + sauvegarde dans PostgreSQL
 @app.post("/backup")
 async def backup(data: InputData):
     X = np.array([[data.FEV1, data.FVC, data.FEV1_FVC, data.SpO2, data.BPM]])
@@ -78,7 +85,7 @@ async def backup(data: InputData):
     prediction = model.predict(X_scaled)[0]
     diagnostic = classes[prediction]
 
-    # Insertion dans la base
+    # Sauvegarde dans PostgreSQL
     query = records.insert().values(
         FEV1=data.FEV1,
         FVC=data.FVC,
@@ -91,7 +98,8 @@ async def backup(data: InputData):
 
     return {"status": "Backup réussi ✅", "diagnostic": diagnostic}
 
-# Lancement du serveur compatible Render
+# ----------------------------
+# ✅ 6. Lancement local
+# ----------------------------
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8000))  # Render fournit le port
-    uvicorn.run("main:app", host="0.0.0.0", port=port)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
